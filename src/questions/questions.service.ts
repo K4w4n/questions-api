@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { KNEX_CONNECTION } from 'src/knex.provider';
 import { Knex } from 'knex';
 import { CreateAlternativeQuestionDto } from './dto/create-alternative-question.dto';
@@ -21,12 +21,11 @@ export class QuestionsService {
 
     await validateOrReject(data);
 
-    console.log(data);
-
     const question = {
       id: uuidv7(),
       type: 'alternative',
       contentHTML: sanitizeHtml(data.contentHTML),
+      examEditionId: data.examEditionId,
     }
 
     const alternatives = data.alternatives.map((alt) => ({
@@ -36,10 +35,37 @@ export class QuestionsService {
       isCorrect: alt.isCorrect,
     }));
 
-    const result = await this.knex('questions').insert(question);
+    const [{ categoryCount }] = await this.knex('categories')
+      .whereIn('id', data.categoryIds)
+      .count('id as categoryCount');
 
-    await this.knex('alternatives').insert(alternatives);
-    return result;
+    if (categoryCount !== data.categoryIds.length) throw new BadRequestException('Invalid category');
+
+    if (data.examEditionId) {
+      const examEdition = await this.knex('exam_editions')
+        .where({ id: data.examEditionId })
+        .first()
+
+      if (!examEdition) throw new BadRequestException('Invalid Exam edition')
+    }
+
+
+    await this.knex.transaction(async (transaction) => {
+
+      await transaction('questions').insert(question);
+
+      await transaction('alternatives').insert(alternatives);
+
+      if (data.categoryIds.length > 0) {
+        await transaction('categories').insert(data.categoryIds.map(categoryId => ({
+          id: uuidv7(),
+          questionId: question.id,
+          categoryId: categoryId,
+        })));
+      }
+    });
+
+    return question;
 
   }
 
@@ -51,6 +77,7 @@ export class QuestionsService {
       id: uuidv7(),
       type: 'essay',
       contentHTML: sanitizeHtml(data.contentHTML),
+      examEditionId: data.examEditionId,
     }
 
     const essayAnswers = data.essayAnswers.map((answers) => ({
@@ -59,10 +86,37 @@ export class QuestionsService {
       contentHTML: sanitizeHtml(answers.contentHTML),
     }));
 
-    const result = await this.knex('questions').insert(question);
+    const [{ categoryCount }] = await this.knex('categories')
+      .whereIn('id', data.categoryIds)
+      .count('id as categoryCount');
 
-    await this.knex('essay_answers').insert(essayAnswers);
-    return result;
+    if (categoryCount !== data.categoryIds.length) throw new BadRequestException('Invalid category');
+
+    if (data.examEditionId) {
+      const examEdition = await this.knex('exam_editions')
+        .where({ id: data.examEditionId })
+        .first()
+
+      if (!examEdition) throw new BadRequestException('Invalid Exam edition')
+    }
+
+    this.knex.transaction(async(transaction) => {
+
+
+      await transaction('questions').insert(question);
+
+      await transaction('essay_answers').insert(essayAnswers);
+
+      if (data.categoryIds.length > 0) {
+        await transaction('categories').insert(data.categoryIds.map(categoryId => ({
+          id: uuidv7(),
+          questionId: question.id,
+          categoryId: categoryId,
+        })));
+      }
+    });
+
+    return question;
   }
 
   async createQuestion(data: CreateAlternativeQuestionDto | CreateEssayQuestionDto) {
@@ -78,6 +132,8 @@ export class QuestionsService {
   async findOne(id: string) {
 
     const question = await this.knex('questions').where({ id }).first();
+
+    if (!question) throw new NotFoundException('Question not found');
 
     if (question.type === 'alternative') question.alternatives = await this.knex('alternatives').where({ questionId: id });
     else if (question.type === 'essay') question.essayAnswers = await this.knex('essay_answers').where({ questionId: id });

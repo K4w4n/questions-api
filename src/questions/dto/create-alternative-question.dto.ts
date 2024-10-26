@@ -9,6 +9,9 @@ import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
   ValidationArguments,
+  IsOptional,
+  isUUID,
+  IsUUID,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -65,4 +68,14 @@ export class CreateAlternativeQuestionDto {
   @Validate(OneCorrectAlternativeConstraint)
   public alternatives: AlternativeDto[];
 
+  @IsNotEmpty()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => String)
+  public categoryIds: string[];
+
+  @IsOptional()
+  @IsString()
+  @IsUUID()
+  public examEditionId?: string;
 }
