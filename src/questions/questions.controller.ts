@@ -5,7 +5,13 @@ import { CreateEssayQuestionDto } from './dto/create-essay-question.dto';
 
 @Controller('questions')
 export class QuestionsController {
-  constructor(private readonly questionsService: QuestionsService) {}
+
+  constructor(private readonly questionsService: QuestionsService) { }
+
+  @Post('')
+  createQuestion(@Body() createQuestionDto: CreateAlternativeQuestionDto | CreateEssayQuestionDto) {
+    return this.questionsService.createQuestion(createQuestionDto);
+  }
 
   @Post('alternative')
   createAlternativeQuestion(@Body() createQuestionDto: CreateAlternativeQuestionDto) {

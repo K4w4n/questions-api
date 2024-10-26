@@ -65,6 +65,16 @@ export class QuestionsService {
     return result;
   }
 
+  async createQuestion(data: CreateAlternativeQuestionDto | CreateEssayQuestionDto) {
+
+    if (data.type === 'alternative') return await this.createAlternativeQuestion(data);
+
+    if (data.type === 'essay') return await this.createEssayQuestion(data);
+
+    throw new NotFoundException('Invalid question type');
+
+  }
+
   async findOne(id: string) {
 
     const question = await this.knex('questions').where({ id }).first();

@@ -3,6 +3,7 @@ import {
   IsBoolean,
   IsNotEmpty,
   IsString,
+  Equals,
   ValidateNested,
   Validate,
   ValidatorConstraint,
@@ -46,9 +47,15 @@ class OneCorrectAlternativeConstraint implements ValidatorConstraintInterface {
 }
 
 export class CreateAlternativeQuestionDto {
+
   @IsNotEmpty()
   @IsString()
-  contentHTML: string;
+  @Equals('alternative')
+  public type: 'alternative';
+
+  @IsNotEmpty()
+  @IsString()
+  public contentHTML: string;
 
   @IsNotEmpty()
   @IsArray()
@@ -56,5 +63,6 @@ export class CreateAlternativeQuestionDto {
   @Type(() => AlternativeDto)
   @Validate(MinTwoAlternativesConstraint)
   @Validate(OneCorrectAlternativeConstraint)
-  alternatives: AlternativeDto[];
+  public alternatives: AlternativeDto[];
+
 }

@@ -1,4 +1,5 @@
 import {
+  Equals,
   IsArray,
   IsNotEmpty,
   IsString,
@@ -13,12 +14,18 @@ class EssayAnswerDto {
 }
 
 export class CreateEssayQuestionDto {
+
   @IsNotEmpty()
   @IsString()
-  contentHTML: string;
+  @Equals('essay')
+  public type: 'essay';
+
+  @IsNotEmpty()
+  @IsString()
+  public contentHTML: string;
 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => EssayAnswerDto)
-  essayAnswers: EssayAnswerDto[];
+  public essayAnswers: EssayAnswerDto[];
 }
